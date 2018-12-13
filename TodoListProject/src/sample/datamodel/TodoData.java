@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Iterator;
 
 public class TodoData {
 
@@ -43,6 +44,22 @@ public class TodoData {
         return todoItems;
     }
 
+    private boolean isInDb(TodoItem item) {
+        try {
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM todo");
+            while (resultSet.next()) {
+                String shortDescription = resultSet.getString(2);
+                String details = resultSet.getString(3);
+                if (item.getShortDescription().equals(shortDescription) && item.getDetails().equals(details)) {
+                    return true;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public void addTodoItem(TodoItem item) {
         todoItems.add(item);
     }
@@ -59,6 +76,24 @@ public class TodoData {
 
                 TodoItem todoItem = new TodoItem(shortDescription, details, deadline);
                 todoItems.add(todoItem);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void storeTodoItems() {
+        try {
+            Iterator<TodoItem> iter = todoItems.iterator();
+            while (iter.hasNext()) {
+                TodoItem item = iter.next();
+                if (!isInDb(item)) {
+                    PreparedStatement preparedStatement = con.prepareStatement("INSERT INTO todo(shortDescription, details, deadline) VALUE (?, ?, ?)");
+                    preparedStatement.setString(1, item.getShortDescription());
+                    preparedStatement.setString(2, item.getDetails());
+                    preparedStatement.setDate(3, Date.valueOf(item.getDeadline()));
+                    preparedStatement.executeUpdate();
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
